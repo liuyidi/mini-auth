@@ -1,0 +1,54 @@
+app/deps.py
+  s_ec0893953fb45d::t_337e48317e035d 1-23,25-27
+  s_ec0893953fb45d::t_f9958d03f0f584 24
+app/config.py
+  s_ec0893953fb45d::t_573adee28f5f5f 1-36
+alembic/versions/001_initial.py
+  s_ec0893953fb45d::t_df5b1e2af19258 1-55
+README.md
+  s_ec0893953fb45d::t_bbc7c4e9d30376 1-64
+railway.toml
+  s_ec0893953fb45d::t_ba2448e6b2e6ae 1-8
+alembic/env.py
+  s_ec0893953fb45d::t_9078a4f18f9d96 1-49
+Dockerfile
+  s_ec0893953fb45d::t_7e5193ee62d1f7 1-19
+alembic.ini
+  s_ec0893953fb45d::t_ab998f99549f3d 1-42
+app/database.py
+  s_ec0893953fb45d::t_c8aca82b03d05f 1-18
+app/routers/auth.py
+  s_ec0893953fb45d::t_8eb0f680b823c1 1-58
+.env.example
+  s_ec0893953fb45d::t_3ab7b739f84245 1-5
+.gitignore
+  s_ec0893953fb45d::t_5991f39b6d5b2f 1-15
+app/main.py
+  s_ec0893953fb45d::t_37706053126188 1-34
+requirements.txt
+  s_ec0893953fb45d::t_ea63b7c76d65bd 1-10
+app/models/user.py
+  s_ec0893953fb45d::t_d598b369e47cbe 1-41
+app/services/auth_service.py
+  s_ec0893953fb45d::t_37e6510ca5f59f 1-186
+app/models/__init__.py
+  s_ec0893953fb45d::t_d6144d345cb25c 1-3
+app/schemas/auth.py
+  s_ec0893953fb45d::t_bcd9e7d5636673 1-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.28-trip",
+  "base_commit_sha": "917da50c8a5b51c9763c129d7bf421e0f50aa9c4",
+  "prompts": {},
+  "sessions": {
+    "s_ec0893953fb45d": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "63df07f4-c056-49ad-bfc2-b34c78be47a1",
+        "model": "default"
+      },
+      "human_author": "liuyidi <yidiliu@trip.com>"
+    }
+  }
+}
