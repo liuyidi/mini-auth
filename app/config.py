@@ -4,7 +4,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    database_url: str = "postgresql://postgres:postgres@localhost:5432/deepseek_chat"
+    # Overridden at runtime by the DATABASE_URL environment variable injected
+    # by Railway from the linked Postgres service.  The default below is only
+    # used for local development; it intentionally uses the bare "postgres://"
+    # scheme so that sync_database_url / async_database_url normalise it the
+    # same way Railway's connection string is normalised.
+    database_url: str = "postgres://postgres:postgres@localhost:5432/deepseek_chat"
     jwt_secret: str = "change-me-to-a-long-random-string"
     jwt_access_expire_minutes: int = 30
     jwt_refresh_expire_days: int = 30
