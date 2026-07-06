@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -8,15 +9,17 @@ from app.config import settings
 from app.database import engine
 from app.routers.auth import router as auth_router
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     # Verify the database connection is reachable before accepting traffic.
-    # This surfaces misconfigured DATABASE_URL immediately at startup rather
-    # than on the first request, which also causes Railway's health check to
-    # fail fast and retry instead of routing traffic to a broken instance.
+    # This surfaces a misconfigured DATABASE_URL immediately at startup rather
+    # than on the first request.
     async with engine.connect() as conn:
         await conn.execute(text("SELECT 1"))
+    logger.info("Database connection verified successfully")
     yield
 
 
