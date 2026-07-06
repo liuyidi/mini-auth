@@ -4,6 +4,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    # Railway injects DATABASE_URL as "postgres://..." — both that prefix and
+    # the standard "postgresql://..." prefix are normalised by the properties
+    # below.  The default here is only used for local development.
     database_url: str = "postgresql://postgres:postgres@localhost:5432/deepseek_chat"
     jwt_secret: str = "change-me-to-a-long-random-string"
     jwt_access_expire_minutes: int = 30
