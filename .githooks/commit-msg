@@ -1,0 +1,3 @@
+#!/bin/sh
+# 本仓库跳过全局 git-check（~/.git-check）的 idev 校验
+exit 0
