@@ -16,7 +16,7 @@
 | 代码目录（服务器） | `/opt/auth/mini-auth` |
 | Compose 根目录 | `/opt/auth` |
 
-安全组入站需放行：**22 / 80 / 443**（勿对公网开放 5432）。
+安全组入站需放行：**22 / 80 / 443**（勿对公网开放 5432 / 6379）。
 
 ## 架构
 
@@ -32,6 +32,33 @@ DNS auth.liuyidi.me ──A──► <TENCENT_PUBLIC_IP>
 
 客户端登录 → `https://auth.liuyidi.me`；拿到 access JWT 后再请求阿里云 `https://bot.liuyidi.me` bootstrap。
 
+## 反向代理选型：为何用 Caddy（而不是 nginx）
+
+本机是 **单域名、新建专用 auth 主机**，选 Caddy 的原因：
+
+| | Caddy | nginx（阿里云 Demo 现网） |
+|--|-------|---------------------------|
+| HTTPS | 内置 ACME，几乎零配置自动签/续期 | 需 certbot + 证书路径 + reload |
+| 配置量 | 一个 `Caddyfile` 即可 | 站点 + SSL + 续期脚本 |
+| 现状 | auth 机从零搭建 | 阿里云已有多域名 SAN 证书与 nginx，继续沿用更合理 |
+
+**不是** Caddy 比 nginx 更「正确」：阿里云 `bot/mlf/kb` 继续用 nginx；腾讯云 auth 用 Caddy 是为了少运维。若你坚持全栈统一 nginx，可以把 `caddy` 服务换成宿主机 nginx 反代 `127.0.0.1:8000`（需给 api 映射 host 端口）。
+
+## 架构
+
+```text
+DNS auth.liuyidi.me ──A──► <TENCENT_PUBLIC_IP>
+                              │
+                   Caddy :443 (Let's Encrypt)
+                              │
+                   api :8000  (FastAPI / mini-auth)
+                         │         │
+                    Postgres 16   Redis 7
+                    (持久化)      (验证码 / state / 限流)
+```
+
+与 [`auth-platform-design.md`](./auth-platform-design.md) §9 一致：**PG 持久化 + Redis 短期态**。
+
 ## 境内加速约定（对齐阿里云 Demo）
 
 与 [aliyun-ecs-demo-deploy](../../mini-langfuse/.claude/skills/aliyun-ecs-demo-deploy/SKILL.md) / `mini-langfuse/deploy/demo` 相同策略：
@@ -46,9 +73,10 @@ DNS auth.liuyidi.me ──A──► <TENCENT_PUBLIC_IP>
 
 仓库内脚本：
 
+- [`deploy/README.md`](../deploy/README.md)
 - [`deploy/setup-docker-mirror.sh`](../deploy/setup-docker-mirror.sh)
 - [`deploy/Dockerfile.ecs`](../deploy/Dockerfile.ecs)（CN 友好构建）
-- [`deploy/docker-compose.yml`](../deploy/docker-compose.yml)
+- [`deploy/docker-compose.yml`](../deploy/docker-compose.yml)（api + Postgres + Redis + Caddy）
 - [`deploy/Caddyfile`](../deploy/Caddyfile)
 
 ## 0. DNS（若未配）
@@ -135,12 +163,14 @@ cd /opt/auth
 cp mini-auth/deploy/docker-compose.yml .
 cp mini-auth/deploy/Caddyfile .
 cp mini-auth/deploy/.env.example .env
-# 编辑 .env：强随机 JWT_SECRET、Postgres 密码、CORS
+# 编辑 .env：强随机 JWT_SECRET、POSTGRES_PASSWORD、REDIS_PASSWORD、CADDY_ACME_EMAIL
 nano .env
 
 # 构建上下文指向源码（compose 内 build.context=./mini-auth）
-docker compose build
+docker compose pull db redis caddy
+docker compose build api
 docker compose up -d
+docker compose ps
 ```
 
 `.env` 最小项：
@@ -150,10 +180,14 @@ POSTGRES_USER=auth
 POSTGRES_PASSWORD=<强密码>
 POSTGRES_DB=mini_auth
 DATABASE_URL=postgresql://auth:<强密码>@db:5432/mini_auth
+REDIS_PASSWORD=<强密码>
+REDIS_URL=redis://:<强密码>@redis:6379/0
 JWT_SECRET=<长随机串>
 JWT_ACCESS_EXPIRE_MINUTES=30
 JWT_REFRESH_EXPIRE_DAYS=30
+JWT_ISSUER=https://auth.liuyidi.me
 CORS_ORIGINS=https://bot.liuyidi.me,https://auth.liuyidi.me
+CADDY_ACME_EMAIL=you@example.com
 ```
 
 ## 3. 验收
@@ -207,3 +241,5 @@ curl -fsS https://auth.liuyidi.me/health
 | OOM | 确认 swap；勿在同机再堆无关大服务 |
 | 证书失败 | `dig auth.liuyidi.me`、安全组、Caddy 日志 `docker compose logs caddy` |
 | GitHub 慢 | `ghfast.top` 前缀 clone/fetch |
+| Redis 起不来 | `.env` 是否设置 `REDIS_PASSWORD`；healthcheck 需同密码 |
+| Caddy 证书失败 | `CADDY_ACME_EMAIL`、DNS、安全组 80 |

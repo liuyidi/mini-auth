@@ -1,4 +1,19 @@
+# Reverse proxy for auth.liuyidi.me (automatic HTTPS via Let's Encrypt).
+# Why Caddy (not nginx) on this host: see docs/tencent-auth-deploy.md.
+
 auth.liuyidi.me {
 	encode gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	# OIDC discovery / JWKS are public; short cache OK (design §14.3).
+	@oidc path /.well-known/* /v1/jwks /jwks.json
+	header @oidc Cache-Control "public, max-age=60"
+
 	reverse_proxy api:8000
 }

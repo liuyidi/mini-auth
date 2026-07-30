@@ -1,5 +1,11 @@
 # Deploy root: /opt/auth (compose + Caddyfile + .env)
 # Build context: ./mini-auth (git clone of this repo)
+#
+# Stack (auth-platform-design.md §9 / §14):
+#   Caddy → api → Postgres + Redis
+# Images via DaoCloud for mainland pulls.
+
+name: mini-auth
 
 services:
   db:
@@ -11,10 +17,35 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-auth} -d ${POSTGRES_DB:-mini_auth}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-auth} -d ${POSTGRES_DB:-mini_auth}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - internal
+    restart: unless-stopped
+
+  redis:
+    image: docker.m.daocloud.io/library/redis:7-alpine
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${REDIS_PASSWORD:?set REDIS_PASSWORD}
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - internal
     restart: unless-stopped
 
   api:
@@ -24,12 +55,17 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-auth}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-mini_auth}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
       PORT: "8000"
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     expose:
       - "8000"
+    networks:
+      - internal
     restart: unless-stopped
 
   caddy:
@@ -37,15 +73,24 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    environment:
+      CADDY_ACME_EMAIL: ${CADDY_ACME_EMAIL:-}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
       - api
+    networks:
+      - internal
     restart: unless-stopped
+
+networks:
+  internal:
+    driver: bridge
 
 volumes:
   pgdata:
+  redisdata:
   caddy_data:
   caddy_config:
