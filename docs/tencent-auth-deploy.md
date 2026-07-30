@@ -69,17 +69,32 @@ dig +short auth.liuyidi.me
 ```bash
 ssh -i ~/Downloads/tencent_cloud.pem ubuntu@150.158.146.191
 
-# 官方安装脚本（腾讯云一般可用）；若慢可改用阿里云 docker-ce 源
-curl -fsSL https://get.docker.com | sudo sh
+# get.docker.com 在境内常被重置；用阿里云 docker-ce apt 源（已在本机验证）
+export DEBIAN_FRONTEND=noninteractive
+sudo apt-get update -qq
+sudo apt-get install -y -qq ca-certificates curl gnupg
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://mirrors.aliyun.com/docker-ce/linux/ubuntu/gpg \
+  | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+https://mirrors.aliyun.com/docker-ce/linux/ubuntu \
+$(. /etc/os-release && echo $VERSION_CODENAME) stable" \
+  | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
+sudo apt-get update -qq
+sudo apt-get install -y -qq docker-ce docker-ce-cli containerd.io \
+  docker-buildx-plugin docker-compose-plugin
 sudo usermod -aG docker ubuntu
 # 重新 SSH 登录一次使 docker 组生效
 
 # 配置 DaoCloud 镜像加速（与阿里云 Demo 一致）
+# 或执行仓库: bash deploy/setup-docker-mirror.sh
 sudo mkdir -p /etc/docker
 sudo tee /etc/docker/daemon.json >/dev/null <<'EOF'
 {
   "registry-mirrors": [
-    "https://docker.m.daocloud.io"
+    "https://docker.m.daocloud.io",
+    "https://docker.1ms.run"
   ],
   "log-driver": "json-file",
   "log-opts": {
@@ -89,14 +104,12 @@ sudo tee /etc/docker/daemon.json >/dev/null <<'EOF'
 }
 EOF
 sudo systemctl daemon-reload
-sudo systemctl restart docker
-sudo systemctl enable docker
+sudo systemctl enable --now docker
 
-docker pull hello-world
-docker run --rm hello-world
+sudo docker pull docker.m.daocloud.io/library/hello-world:latest
+sudo docker run --rm docker.m.daocloud.io/library/hello-world:latest
 ```
 
-或把仓库里的 `deploy/setup-docker-mirror.sh` 拷上去执行。
 
 ## 2. 放置代码与 Compose
 
