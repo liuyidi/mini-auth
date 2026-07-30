@@ -1,0 +1,51 @@
+# Deploy root: /opt/auth (compose + Caddyfile + .env)
+# Build context: ./mini-auth (git clone of this repo)
+
+services:
+  db:
+    image: docker.m.daocloud.io/library/postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-auth}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-mini_auth}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-auth} -d ${POSTGRES_DB:-mini_auth}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./mini-auth
+      dockerfile: deploy/Dockerfile.ecs
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-auth}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-mini_auth}
+      PORT: "8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "8000"
+    restart: unless-stopped
+
+  caddy:
+    image: docker.m.daocloud.io/library/caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

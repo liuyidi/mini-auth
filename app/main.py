@@ -24,7 +24,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(
-    title="DeepSeek Chat API",
+    title="mini-auth",
     version="0.1.0",
     lifespan=lifespan,
 )
