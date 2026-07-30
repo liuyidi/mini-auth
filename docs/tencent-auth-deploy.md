@@ -2,15 +2,17 @@
 
 独立认证服务跑在 **腾讯云 CVM**；业务（bot / mlf / kb）仍在阿里云。域名 DNS 指向腾讯云公网 IP 即可跨云互通。
 
-## 机器信息（当前）
+> **机密信息**：公网 IP、SSH 用户、pem 路径等**不要写进本文件**。  
+> 本机私有副本：复制 [`deploy/host.env.example`](../deploy/host.env.example) → `deploy/host.env`（已 gitignore），或维护个人笔记。
 
-| 项 | 值 |
-|----|-----|
-| 公网 IP | `150.158.146.191` |
-| SSH | `ssh -i ~/Downloads/tencent_cloud.pem ubuntu@150.158.146.191` |
-| 系统 | Ubuntu 22.04，约 2C2G，40G 盘 |
-| 内存 / Swap | ~1.9G + **2G swap（已启用）** |
-| 域名 | `auth.liuyidi.me` → A 记录已指向上述 IP（万网 DNS） |
+## 机器角色（公开约定）
+
+| 项 | 说明 |
+|----|------|
+| 云厂商 | 腾讯云 CVM（与阿里云业务机分离） |
+| SSH | `ssh -i <PEM> <USER>@<PUBLIC_IP>`（具体值见本地 `deploy/host.env`） |
+| 规格参考 | 约 2C2G；生产建议启用 ≥2G swap |
+| 域名 | `auth.liuyidi.me` → A 记录指向该机公网 IP |
 | 代码目录（服务器） | `/opt/auth/mini-auth` |
 | Compose 根目录 | `/opt/auth` |
 
@@ -19,7 +21,7 @@
 ## 架构
 
 ```text
-DNS auth.liuyidi.me ──A──► 150.158.146.191
+DNS auth.liuyidi.me ──A──► <TENCENT_PUBLIC_IP>
                               │
                    Caddy :443 (Let's Encrypt)
                               │
@@ -51,25 +53,31 @@ DNS auth.liuyidi.me ──A──► 150.158.146.191
 
 ## 0. DNS（若未配）
 
-万网 / DNS 控制台：
+DNS 控制台：
 
 | 类型 | 主机记录 | 值 |
 |------|----------|-----|
-| A | `auth` | `150.158.146.191` |
+| A | `auth` | `<TENCENT_PUBLIC_IP>` |
 
 ```bash
 dig +short auth.liuyidi.me
-# 期望: 150.158.146.191
+# 应等于腾讯云 CVM 公网 IP（与本地 host.env 中一致）
 ```
 
 ## 1. 安装 Docker + 镜像加速（第一步）
 
+先登录（变量来自本地 `deploy/host.env`）：
+
+```bash
+# shellcheck source=/dev/null
+source deploy/host.env   # 本机私有，勿提交
+ssh -i "$AUTH_SSH_PEM" "${AUTH_SSH_USER}@${AUTH_HOST}"
+```
+
 在腾讯云上执行：
 
 ```bash
-ssh -i ~/Downloads/tencent_cloud.pem ubuntu@150.158.146.191
-
-# get.docker.com 在境内常被重置；用阿里云 docker-ce apt 源（已在本机验证）
+# get.docker.com 在境内常被重置；用阿里云 docker-ce apt 源
 export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update -qq
 sudo apt-get install -y -qq ca-certificates curl gnupg
@@ -84,7 +92,7 @@ $(. /etc/os-release && echo $VERSION_CODENAME) stable" \
 sudo apt-get update -qq
 sudo apt-get install -y -qq docker-ce docker-ce-cli containerd.io \
   docker-buildx-plugin docker-compose-plugin
-sudo usermod -aG docker ubuntu
+sudo usermod -aG docker "$USER"
 # 重新 SSH 登录一次使 docker 组生效
 
 # 配置 DaoCloud 镜像加速（与阿里云 Demo 一致）
@@ -110,20 +118,18 @@ sudo docker pull docker.m.daocloud.io/library/hello-world:latest
 sudo docker run --rm docker.m.daocloud.io/library/hello-world:latest
 ```
 
-
 ## 2. 放置代码与 Compose
 
 ```bash
 sudo mkdir -p /opt/auth
-sudo chown ubuntu:ubuntu /opt/auth
+sudo chown "$USER:$USER" /opt/auth
 cd /opt/auth
 
 # 优先 ghfast（境内）
 git clone https://ghfast.top/https://github.com/liuyidi/mini-auth.git mini-auth \
   || git clone https://github.com/liuyidi/mini-auth.git mini-auth
 
-# 若 GitHub 仓库尚未改名，临时仍用：
-# git clone …/deepseek-chat-api.git mini-auth
+# 若 GitHub 仓库尚未改名，临时仍用 deepseek-chat-api 仓名 clone 后目录仍叫 mini-auth
 
 cd /opt/auth
 cp mini-auth/deploy/docker-compose.yml .
@@ -164,7 +170,8 @@ curl -fsS -o /dev/null -w "docs %{http_code}\n" https://auth.liuyidi.me/docs
 ## 4. 日常更新
 
 ```bash
-ssh -i ~/Downloads/tencent_cloud.pem ubuntu@150.158.146.191
+source deploy/host.env   # 本机
+ssh -i "$AUTH_SSH_PEM" "${AUTH_SSH_USER}@${AUTH_HOST}"
 cd /opt/auth/mini-auth
 git fetch origin main && git reset --hard origin/main
 cd /opt/auth
@@ -187,9 +194,9 @@ curl -fsS https://auth.liuyidi.me/health
 
 本地与 GitHub 目标名：**mini-auth**（原 `deepseek-chat-api`）。
 
-- 本机路径：`/Users/liuyidi/github/mini-auth`
+- 本机路径：按你自己的 clone 目录为准
 - GitHub：`github.com/liuyidi/mini-auth`（`gh repo rename mini-auth` 或网页 Settings → Rename）
-- 服务器目录名固定用 `mini-auth`，即使曾从旧仓 clone
+- 服务器目录名固定用 `mini-auth`
 
 ## 常见坑
 
