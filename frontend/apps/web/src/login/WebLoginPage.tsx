@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import type { EmailCodeStartResult } from "@mini-auth/auth-ui";
 import type { EmailCodeVerifyOptions } from "../authClient";
+import { trackUmami } from "../umami";
 
 import "./web-login-page.css";
 
@@ -188,7 +189,12 @@ function ProviderButton({ provider }: { provider: AuthProvider }) {
 
   if (provider.href) {
     return (
-      <a className="mini-login-provider" href={provider.href} aria-label={provider.label}>
+      <a
+        className="mini-login-provider"
+        href={provider.href}
+        aria-label={provider.label}
+        onClick={() => trackUmami("oauth_start", { method: provider.id })}
+      >
         {provider.icon}
         <span>{provider.label}</span>
       </a>
@@ -477,6 +483,7 @@ export function WebLoginPage({
     setLoadingVerify(true);
     try {
       await onVerifyCode(normalized, code.trim(), isRegister ? { username: username.trim() } : undefined);
+      trackUmami(isRegister ? "sign_up" : "login", { method: "email" });
       window.location.assign(nextValue || "/docs");
     } catch (err) {
       setError(err instanceof Error ? err.message : copy.errors.signInFailed);
