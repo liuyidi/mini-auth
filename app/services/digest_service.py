@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -232,4 +232,15 @@ async def run_daily_digest(db: AsyncSession, *, send: bool = True) -> DailyDiges
     if send:
         await send_feishu_card(build_digest_card(digest))
         sent = True
-    return DailyDigest(**{**asdict(digest), "feishu_sent": sent})
+    return DailyDigest(
+        date=digest.date,
+        timezone=digest.timezone,
+        total_users=digest.total_users,
+        users_created_today=digest.users_created_today,
+        pageviews=digest.pageviews,
+        visitors=digest.visitors,
+        visits=digest.visits,
+        umami_website_id=digest.umami_website_id,
+        users=digest.users,
+        feishu_sent=sent,
+    )

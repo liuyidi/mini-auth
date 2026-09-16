@@ -16,6 +16,10 @@ router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(requir
 
 
 def _to_response(digest) -> DailyDigestResponse:
+    users = []
+    for row in digest.users:
+        payload = row if isinstance(row, dict) else row.__dict__
+        users.append(DigestUserRowResponse(**payload))
     return DailyDigestResponse(
         date=digest.date,
         timezone=digest.timezone,
@@ -25,7 +29,7 @@ def _to_response(digest) -> DailyDigestResponse:
         visitors=digest.visitors,
         visits=digest.visits,
         umami_website_id=digest.umami_website_id,
-        users=[DigestUserRowResponse(**row.__dict__) for row in digest.users],
+        users=users,
         feishu_sent=digest.feishu_sent,
     )
 
