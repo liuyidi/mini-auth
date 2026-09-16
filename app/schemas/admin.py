@@ -20,6 +20,13 @@ class AuthClientResponse(BaseModel):
     status: str
 
 
+class DigestUserRowResponse(BaseModel):
+    email: str
+    nickname: str
+    created_at: str
+    is_demo: bool
+
+
 class DailyDigestResponse(BaseModel):
     date: str
     timezone: str
@@ -29,4 +36,5 @@ class DailyDigestResponse(BaseModel):
     visitors: int
     visits: int
     umami_website_id: str
+    users: list[DigestUserRowResponse]
     feishu_sent: bool

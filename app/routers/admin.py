@@ -3,11 +3,31 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.deps_admin import require_admin_api_key
-from app.schemas.admin import AuthClientCreateRequest, AuthClientResponse, DailyDigestResponse
+from app.schemas.admin import (
+    AuthClientCreateRequest,
+    AuthClientResponse,
+    DailyDigestResponse,
+    DigestUserRowResponse,
+)
 from app.services.admin_service import create_auth_client, list_auth_clients
 from app.services.digest_service import build_daily_digest, run_daily_digest
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin_api_key)])
+
+
+def _to_response(digest) -> DailyDigestResponse:
+    return DailyDigestResponse(
+        date=digest.date,
+        timezone=digest.timezone,
+        total_users=digest.total_users,
+        users_created_today=digest.users_created_today,
+        pageviews=digest.pageviews,
+        visitors=digest.visitors,
+        visits=digest.visits,
+        umami_website_id=digest.umami_website_id,
+        users=[DigestUserRowResponse(**row.__dict__) for row in digest.users],
+        feishu_sent=digest.feishu_sent,
+    )
 
 
 @router.post("/clients", response_model=AuthClientResponse, status_code=201)
@@ -33,7 +53,7 @@ async def get_stats(db: AsyncSession = Depends(get_db)) -> DailyDigestResponse:
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=str(exc),
         ) from exc
-    return DailyDigestResponse(**digest.__dict__)
+    return _to_response(digest)
 
 
 @router.post("/daily-digest", response_model=DailyDigestResponse)
@@ -50,4 +70,4 @@ async def post_daily_digest(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=str(exc),
         ) from exc
-    return DailyDigestResponse(**digest.__dict__)
+    return _to_response(digest)

@@ -3,29 +3,57 @@ from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from zoneinfo import ZoneInfo
 
-from app.services.digest_service import DailyDigest, format_digest_text
+from app.services.digest_service import (
+    DailyDigest,
+    DigestUserRow,
+    build_digest_card,
+    format_digest_text,
+)
 from app.services.umami_stats_service import UmamiDayStats, fetch_umami_day_stats
 
 
+def _sample_digest() -> DailyDigest:
+    return DailyDigest(
+        date="2026-09-17",
+        timezone="Asia/Shanghai",
+        total_users=2,
+        users_created_today=1,
+        pageviews=42,
+        visitors=9,
+        visits=10,
+        umami_website_id="dcc92778-4c55-4181-b006-d2085fdb1d20",
+        users=[
+            DigestUserRow(
+                email="demo@mini-auth.dev",
+                nickname="demo",
+                created_at="2026-01-01 12:00",
+                is_demo=True,
+            ),
+            DigestUserRow(
+                email="user@example.com",
+                nickname="Alice",
+                created_at="2026-09-17 09:00",
+                is_demo=False,
+            ),
+        ],
+        feishu_sent=False,
+    )
+
+
 class DigestFormatTest(unittest.TestCase):
-    def test_format_includes_core_metrics(self) -> None:
-        text = format_digest_text(
-            DailyDigest(
-                date="2026-09-17",
-                timezone="Asia/Shanghai",
-                total_users=12,
-                users_created_today=2,
-                pageviews=42,
-                visitors=9,
-                visits=10,
-                umami_website_id="dcc92778-4c55-4181-b006-d2085fdb1d20",
-                feishu_sent=False,
-            )
-        )
-        self.assertIn("总用户：12", text)
-        self.assertIn("今日新增用户：2", text)
-        self.assertIn("今日 PV：42", text)
+    def test_format_includes_core_metrics_and_emails(self) -> None:
+        text = format_digest_text(_sample_digest())
+        self.assertIn("总用户：2", text)
+        self.assertIn("demo@mini-auth.dev", text)
+        self.assertIn("user@example.com", text)
         self.assertIn("fAjwSKOBPqy37HAd", text)
+
+    def test_card_contains_user_table(self) -> None:
+        card = build_digest_card(_sample_digest())
+        table = next(el for el in card["elements"] if el.get("tag") == "table")
+        emails = [row["email"] for row in table["rows"]]
+        self.assertEqual(emails, ["demo@mini-auth.dev", "user@example.com"])
+        self.assertIn("demo", table["rows"][0]["nickname"])
 
 
 class UmamiStatsServiceTest(unittest.IsolatedAsyncioTestCase):
