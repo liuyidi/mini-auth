@@ -129,6 +129,32 @@ CI 在 runner 上构建 SPA，然后通过 **SCP** 将 `app/`、`alembic/`、`de
 | Variable | `VITE_GOOGLE_LOGIN_ENABLED` | 可选，默认 `true` |
 | Variable | `SERVERLESSSHIP_RELEASE_URL` | 可选 |
 | Secret | `AUTH_SSH_PRIVATE_KEY` | 对应本机 `deploy/host.env` 的 PEM 内容 |
+| Secret | `AUTH_ADMIN_API_KEY` | 与 CVM `.env` 中 `AUTH_ADMIN_API_KEY` 相同（日报 workflow 用） |
+| Variable | `AUTH_BASE_URL` | 可选，默认 `https://auth.liuyidi.me`（日报 workflow） |
+
+## 每日飞书汇总
+
+工作流：[`.github/workflows/daily-digest-feishu.yml`](../.github/workflows/daily-digest-feishu.yml)（每天 10:00 上海时区，或手动 `workflow_dispatch`）。
+
+在 `/opt/auth/.env` 增加（Webhook 或飞书应用二选一，应用凭证可与 serverless-ship 相同）：
+
+```bash
+# Option A
+FEISHU_WEBHOOK_URL=https://open.feishu.cn/open-apis/bot/v2/hook/...
+
+# Option B (app IM)
+FEISHU_APP_ID=cli_xxx
+FEISHU_APP_SECRET=xxx
+FEISHU_TARGET_OPEN_ID=ou_xxx
+FEISHU_TARGET_ID_TYPE=open_id
+
+UMAMI_SHARE_BASE_URL=https://cloud.umami.is/analytics/us
+UMAMI_SHARE_SLUG=fAjwSKOBPqy37HAd
+DIGEST_TIMEZONE=Asia/Shanghai
+AUTH_ADMIN_API_KEY=change-me-admin-api-key
+```
+
+然后 `docker compose --env-file .env up -d api`。预览：`GET /api/v1/admin/stats`（Header `X-Admin-Api-Key`）。
 
 ## Files
 

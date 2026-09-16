@@ -1,0 +1,47 @@
+name: Daily Digest (Feishu)
+
+# Collect mini-auth user counts + Umami share stats, then post Feishu via
+# POST /api/v1/admin/daily-digest on the auth host.
+#
+# Required:
+#   secrets: AUTH_ADMIN_API_KEY
+#   vars (optional): AUTH_BASE_URL (default https://auth.liuyidi.me)
+#
+# Server /opt/auth/.env must set FEISHU_WEBHOOK_URL (and optionally UMAMI_*).
+
+on:
+  schedule:
+    # 10:00 Asia/Shanghai
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  daily-digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      AUTH_BASE_URL: ${{ vars.AUTH_BASE_URL || 'https://auth.liuyidi.me' }}
+      AUTH_ADMIN_API_KEY: ${{ secrets.AUTH_ADMIN_API_KEY }}
+
+    steps:
+      - name: Require AUTH_ADMIN_API_KEY
+        run: |
+          set -euo pipefail
+          if [[ -z "${AUTH_ADMIN_API_KEY:-}" ]]; then
+            echo "Set repository secret AUTH_ADMIN_API_KEY (same value as AUTH_ADMIN_API_KEY on the CVM)." >&2
+            exit 1
+          fi
+
+      - name: Trigger daily digest
+        run: |
+          set -euo pipefail
+          curl -fsS -X POST "${AUTH_BASE_URL%/}/api/v1/admin/daily-digest" \
+            -H "X-Admin-Api-Key: ${AUTH_ADMIN_API_KEY}" \
+            -H "Accept: application/json" \
+            -w "\n"

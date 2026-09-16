@@ -163,6 +163,8 @@ For CLI-oriented device login, use the device authorization page exposed by the 
 |------|------|------|
 | POST | `/api/v1/admin/clients` | Register an OIDC client |
 | GET | `/api/v1/admin/clients` | List OIDC clients |
+| GET | `/api/v1/admin/stats` | Daily digest preview (users + Umami; no Feishu) |
+| POST | `/api/v1/admin/daily-digest` | Build digest and send Feishu (`?send=false` to preview) |
 | GET | `/health` | Health check |
 
 ## Production Deployment

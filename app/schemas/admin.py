@@ -18,3 +18,15 @@ class AuthClientResponse(BaseModel):
     allowed_scopes: list[str]
     pkce_required: bool
     status: str
+
+
+class DailyDigestResponse(BaseModel):
+    date: str
+    timezone: str
+    total_users: int
+    users_created_today: int
+    pageviews: int
+    visitors: int
+    visits: int
+    umami_website_id: str
+    feishu_sent: bool

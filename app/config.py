@@ -49,6 +49,17 @@ class Settings(BaseSettings):
     google_relay_url: str = ""
     google_relay_shared_secret: str = ""
 
+    # Daily digest (Feishu) — Umami Cloud share API (no Pro API key)
+    feishu_webhook_url: str = ""
+    feishu_app_id: str = ""
+    feishu_app_secret: str = ""
+    feishu_target_open_id: str = ""
+    feishu_target_id_type: str = "open_id"
+    umami_share_base_url: str = "https://cloud.umami.is/analytics/us"
+    umami_share_slug: str = "fAjwSKOBPqy37HAd"
+    digest_timezone: str = "Asia/Shanghai"
+    digest_http_timeout_seconds: float = 15.0
+
     @property
     def async_database_url(self) -> str:
         url = self.database_url

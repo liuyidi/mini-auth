@@ -163,6 +163,8 @@ http://127.0.0.1:8000/docs
 |------|------|------|
 | POST | `/api/v1/admin/clients` | 注册 OIDC 客户端 |
 | GET | `/api/v1/admin/clients` | 查看 OIDC 客户端 |
+| GET | `/api/v1/admin/stats` | 日报预览（用户量 + Umami 访问量，不发飞书） |
+| POST | `/api/v1/admin/daily-digest` | 汇总并发送飞书日报（`?send=false` 仅预览） |
 | GET | `/health` | 健康检查 |
 
 ## 生产部署
